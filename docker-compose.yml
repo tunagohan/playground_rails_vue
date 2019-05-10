@@ -1,0 +1,52 @@
+version: '3'
+services:
+  # MySQL
+  db:
+    container_name: playground_rails_vue_db
+    build:
+      context: .
+      dockerfile: ./docker/mysql/Dockerfile
+    volumes:
+      - data-store:/var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root_password}
+      MYSQL_USER: ${MYSQL_USER:-rails_vue_user}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-rails_vue_password}
+    ports:
+      - "${DB_PORT:-3306}:3306"
+
+  # Rails
+  app: &app_base
+    container_name: playground_rails_vue_app
+    build:
+      context: .
+      dockerfile: ./docker/ruby/Dockerfile
+    environment:
+      RAILS_ENV: development
+    volumes:
+      - .:/app
+      - bundle:/bundle
+    depends_on:
+      - db
+    stdin_open: true
+    tty: true
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    command: ./bin/server
+
+  # Webpacker
+  webpack:
+    <<: *app_base
+    container_name: playground_rails_vue_webpacker
+    command: "bin/webpack-dev-server"
+    ports:
+      - "3035:3035"
+    depends_on:
+      - app
+    tty: false
+    stdin_open: false
+
+volumes:
+  data-store:
+  bundle:
+    driver: local
